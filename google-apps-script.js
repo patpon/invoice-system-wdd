@@ -201,35 +201,33 @@ function getLatestInvoiceNumber(payload) {
     const ss = SpreadsheetApp.getActiveSpreadsheet();
     const sheet = ss.getSheetByName(CONFIG.INVOICES_SHEET);
 
-    if (!sheet) {
-        return { success: true, latestNumber: 0, datePrefix: '', message: 'ไม่พบ Sheet Invoices' };
-    }
-
-    const data = sheet.getDataRange().getValues();
-    if (data.length <= 1) {
-        return { success: true, latestNumber: 0, datePrefix: '', message: 'ยังไม่มีใบกำกับภาษี' };
-    }
-
-    // รับ datePrefix จาก payload (รูปแบบ YYMMDD เช่น 260107)
-    // ถ้าไม่ส่งมา ใช้วันที่ปัจจุบัน
+    // สร้าง datePrefix ก่อนเสมอ
     let datePrefix = '';
     if (payload && payload.datePrefix) {
         datePrefix = String(payload.datePrefix);
     } else if (payload && payload.date) {
-        // แปลง date เป็น YYMMDD
         const d = new Date(payload.date);
         const yy = d.getFullYear().toString().slice(-2);
         const mm = (d.getMonth() + 1).toString().padStart(2, '0');
         const dd = d.getDate().toString().padStart(2, '0');
         datePrefix = yy + mm + dd;
     } else {
-        // ใช้วันที่ปัจจุบัน
         const d = new Date();
         const yy = d.getFullYear().toString().slice(-2);
         const mm = (d.getMonth() + 1).toString().padStart(2, '0');
         const dd = d.getDate().toString().padStart(2, '0');
         datePrefix = yy + mm + dd;
     }
+
+    if (!sheet) {
+        return { success: true, latestNumber: 0, datePrefix: datePrefix, nextNumber: 1, nextInvoiceNumber: datePrefix + '0001', message: 'ไม่พบ Sheet Invoices' };
+    }
+
+    const data = sheet.getDataRange().getValues();
+    if (data.length <= 1) {
+        return { success: true, latestNumber: 0, datePrefix: datePrefix, nextNumber: 1, nextInvoiceNumber: datePrefix + '0001', message: 'ยังไม่มีใบกำกับภาษี' };
+    }
+
 
     let maxRunningNumber = 0;
 

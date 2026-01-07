@@ -26,6 +26,7 @@ const App = {
         // Setup logout button
         this.initLogout();
 
+
         this.loadSettings();
         this.loadCustomers();
         this.initEventListeners();
@@ -33,6 +34,8 @@ const App = {
         this.initInvoice();
         this.initLogo();
         this.initSignature();
+        // โหลดโลโก้เริ่มต้นเป็น base64 (สำหรับ PDF)
+        Storage.initDefaultLogo();
         this.updatePreview();
         this.loadDashboard();
         console.log('App initialized');

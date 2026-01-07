@@ -78,11 +78,12 @@ const Storage = {
         localStorage.setItem(this.keys.LOGO, base64);
     },
 
+
     /**
      * ดึงโลโก้
      */
     getLogo() {
-        return localStorage.getItem(this.keys.LOGO) || this.getDefaultLogo();
+        return localStorage.getItem(this.keys.LOGO) || '';
     },
 
     /**
@@ -90,6 +91,41 @@ const Storage = {
      */
     getDefaultLogo() {
         return 'logoWDD.jpg';
+    },
+
+    /**
+     * โหลดโลโก้เริ่มต้นและแปลงเป็น Base64 แล้วเก็บใน localStorage
+     */
+    async initDefaultLogo() {
+        // ถ้ามีโลโก้อยู่แล้วใน localStorage ไม่ต้องโหลดใหม่
+        const existingLogo = localStorage.getItem(this.keys.LOGO);
+        if (existingLogo) {
+            return;
+        }
+
+        // โหลดและแปลงโลโก้เริ่มต้นเป็น base64
+        try {
+            const logoUrl = this.getDefaultLogo();
+            const response = await fetch(logoUrl);
+            const blob = await response.blob();
+
+            return new Promise((resolve) => {
+                const reader = new FileReader();
+                reader.onloadend = () => {
+                    const base64 = reader.result;
+                    this.saveLogo(base64);
+                    console.log('Default logo loaded and saved to localStorage');
+                    resolve();
+                };
+                reader.onerror = () => {
+                    console.warn('Cannot read logo file');
+                    resolve();
+                };
+                reader.readAsDataURL(blob);
+            });
+        } catch (error) {
+            console.warn('Cannot load default logo:', error);
+        }
     },
 
     /**
