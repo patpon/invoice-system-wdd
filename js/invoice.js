@@ -679,13 +679,55 @@ const Invoice = {
     },
 
     /**
+     * แปลง URL รูปภาพเป็น Base64 (เพื่อให้ html2pdf render ได้)
+     */
+    async imageToBase64(url) {
+        return new Promise((resolve) => {
+            if (!url) {
+                resolve('');
+                return;
+            }
+            // ถ้าเป็น base64 อยู่แล้ว ให้ใช้เลย
+            if (url.startsWith('data:')) {
+                resolve(url);
+                return;
+            }
+            const img = new Image();
+            img.crossOrigin = 'anonymous';
+            img.onload = function () {
+                try {
+                    const canvas = document.createElement('canvas');
+                    canvas.width = img.width;
+                    canvas.height = img.height;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0);
+                    const dataURL = canvas.toDataURL('image/png');
+                    resolve(dataURL);
+                } catch (e) {
+                    console.warn('Cannot convert image to base64:', e);
+                    resolve(url);
+                }
+            };
+            img.onerror = function () {
+                console.warn('Cannot load image:', url);
+                resolve('');
+            };
+            img.src = url;
+        });
+    },
+
+    /**
      * สร้าง PDF และดาวน์โหลด (A4) - ใช้ inline styles เพื่อให้ html2pdf render ได้ถูกต้อง
      */
     async generatePDF(data) {
         const includeCopy = data.includeCopy === true;
         const company = Storage.getCompany();
-        const logo = Storage.getLogo();
-        const signature = Storage.getSignature ? Storage.getSignature() : '';
+        const logoPath = Storage.getLogo();
+        const signaturePath = Storage.getSignature ? Storage.getSignature() : '';
+
+        // แปลง logo และ signature เป็น base64 ก่อน เพื่อให้ html2pdf render ได้
+        const logo = await this.imageToBase64(logoPath);
+        const signature = await this.imageToBase64(signaturePath);
 
         // Generate invoice HTML with full inline styles
         const pdfContent = this.generatePDFInlineContent(data, company, logo, signature);
