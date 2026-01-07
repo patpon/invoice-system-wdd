@@ -205,9 +205,11 @@ const SheetsAPI = {
                     }
                 }
 
-                // ดึงข้อมูล branch
-                const branchType = row['branchType'] || row['ประเภทสาขา'] || row['K'] || row['col10'] || row[keys[10]] || 'hq';
-                const branchNumber = row['branchNumber'] || row['เลขสาขา'] || row['L'] || row['col11'] || row[keys[11]] || '';
+                // ดึงข้อมูล branch - ต้อง validate ว่า branchType เป็น 'hq' หรือ 'branch' เท่านั้น
+                let branchTypeRaw = row['branchType'] || row['ประเภทสาขา'] || '';
+                // ถ้าไม่ได้ระบุ branchType หรือไม่ใช่ค่าที่ถูกต้อง ให้ default เป็น 'hq'
+                const branchType = (branchTypeRaw === 'hq' || branchTypeRaw === 'branch') ? branchTypeRaw : 'hq';
+                const branchNumber = branchType === 'branch' ? (row['branchNumber'] || row['เลขสาขา'] || '') : '';
 
                 return {
                     invoiceNumber: invoiceNumber,

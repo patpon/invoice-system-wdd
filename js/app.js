@@ -2055,16 +2055,31 @@ const App = {
 
     /**
      * Render ตารางประวัติ
+     * ใช้ data-index เพื่อหลีกเลี่ยงปัญหา encoding กับ invoice numbers
      */
     renderHistoryTable(invoices) {
         const tbody = document.getElementById('historyBody');
+
+        // เก็บ invoices ไว้ใน App object เพื่อใช้อ้างอิง
+        this.historyInvoices = invoices;
 
         if (invoices.length === 0) {
             tbody.innerHTML = '<tr><td colspan="7" class="text-center">ไม่พบใบกำกับภาษี</td></tr>';
             return;
         }
 
-        tbody.innerHTML = invoices.map(inv => {
+        // Escape HTML entities for display only
+        const escapeHtml = (str) => {
+            if (!str) return '';
+            return String(str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        };
+
+        tbody.innerHTML = invoices.map((inv, index) => {
             const status = inv.status || 'active';
             const isActive = status === 'active';
             const statusBadge = isActive
@@ -2073,24 +2088,85 @@ const App = {
             const rowClass = isActive ? '' : 'row-cancelled';
 
             return `
-            <tr class="${rowClass}">
-                <td>${inv.invoiceNumber}</td>
+            <tr class="${rowClass}" data-index="${index}">
+                <td>${escapeHtml(inv.invoiceNumber)}</td>
                 <td>${Invoice.formatDateShort(inv.date)}</td>
-                <td>${inv.customerName}</td>
+                <td>${escapeHtml(inv.customerName)}</td>
                 <td class="text-right">${Invoice.formatCurrency(inv.total)} บาท</td>
                 <td>${statusBadge}</td>
                 <td class="actions">
-                    <button class="btn btn-warning btn-sm" onclick="App.editInvoice('${inv.invoiceNumber}')" ${!isActive ? 'disabled' : ''}>✏️ แก้ไข</button>
-                    <button class="btn btn-primary btn-sm" onclick="App.reprintFromHistory('${inv.invoiceNumber}')">🖨️ พิมพ์</button>
-                    ${isActive ? `<button class="btn btn-info btn-sm" onclick="App.openEmailModalFromHistory('${inv.invoiceNumber}')">📧 Email</button>` : ''}
+                    <button class="btn btn-warning btn-sm btn-history-action" data-action="edit" ${!isActive ? 'disabled' : ''}>✏️ แก้ไข</button>
+                    <button class="btn btn-primary btn-sm btn-history-action" data-action="print">🖨️ พิมพ์</button>
+                    ${isActive ? `<button class="btn btn-info btn-sm btn-history-action" data-action="email">📧 Email</button>` : ''}
                     ${isActive
-                    ? `<button class="btn btn-danger btn-sm" onclick="App.cancelInvoice('${inv.invoiceNumber}')">🚫 ยกเลิก</button>`
-                    : `<button class="btn btn-success btn-sm" onclick="App.restoreInvoice('${inv.invoiceNumber}')">♻️ คืนสถานะ</button>`
+                    ? `<button class="btn btn-danger btn-sm btn-history-action" data-action="cancel">🚫 ยกเลิก</button>`
+                    : `<button class="btn btn-success btn-sm btn-history-action" data-action="restore">♻️ คืนสถานะ</button>`
                 }
-                    <button class="btn btn-dark btn-sm" onclick="App.deleteInvoice('${inv.invoiceNumber}')" title="ลบถาวร">🗑️ ลบ</button>
+                    <button class="btn btn-dark btn-sm btn-history-action" data-action="delete" title="ลบถาวร">🗑️ ลบ</button>
                 </td>
             </tr>
         `}).join('');
+
+        // ใช้ Event Delegation สำหรับปุ่มทั้งหมด (จัดการครั้งเดียว)
+        this.setupHistoryTableEventDelegation();
+    },
+
+    /**
+     * ตั้งค่า Event Delegation สำหรับตารางประวัติ
+     */
+    setupHistoryTableEventDelegation() {
+        const tbody = document.getElementById('historyBody');
+        if (!tbody) return;
+
+        // ลบ event listener เก่าออก (ถ้ามี) แล้วเพิ่มใหม่
+        if (tbody._historyClickHandler) {
+            tbody.removeEventListener('click', tbody._historyClickHandler);
+        }
+
+        tbody._historyClickHandler = (e) => {
+            const btn = e.target.closest('.btn-history-action');
+            if (!btn) return;
+
+            // ป้องกัน disabled buttons
+            if (btn.disabled) return;
+
+            const row = btn.closest('tr');
+            if (!row) return;
+
+            const index = parseInt(row.dataset.index, 10);
+            if (isNaN(index) || !this.historyInvoices || !this.historyInvoices[index]) {
+                console.error('Invalid index or historyInvoices not found', index);
+                return;
+            }
+
+            const invoiceNumber = this.historyInvoices[index].invoiceNumber;
+            const action = btn.dataset.action;
+
+            console.log('History action:', action, 'Invoice:', invoiceNumber);
+
+            switch (action) {
+                case 'edit':
+                    this.editInvoice(invoiceNumber);
+                    break;
+                case 'print':
+                    this.reprintFromHistory(invoiceNumber);
+                    break;
+                case 'email':
+                    this.openEmailModalFromHistory(invoiceNumber);
+                    break;
+                case 'cancel':
+                    this.cancelInvoice(invoiceNumber);
+                    break;
+                case 'restore':
+                    this.restoreInvoice(invoiceNumber);
+                    break;
+                case 'delete':
+                    this.deleteInvoice(invoiceNumber);
+                    break;
+            }
+        };
+
+        tbody.addEventListener('click', tbody._historyClickHandler);
     },
 
     /**
@@ -2212,6 +2288,43 @@ const App = {
     openEditInvoiceModal(invoice) {
         // Store current editing invoice
         this.editingInvoice = JSON.parse(JSON.stringify(invoice));
+
+        // Parse items if it's a JSON string (from Google Sheets)
+        if (typeof this.editingInvoice.items === 'string') {
+            try {
+                this.editingInvoice.items = JSON.parse(this.editingInvoice.items);
+            } catch (e) {
+                console.warn('Cannot parse items JSON:', e);
+                this.editingInvoice.items = [];
+            }
+        }
+        // Ensure items is an array
+        if (!Array.isArray(this.editingInvoice.items) || this.editingInvoice.items.length === 0) {
+            this.editingInvoice.items = [{
+                id: 1,
+                description: 'รายการสินค้า/บริการ',
+                quantity: 1,
+                price: (this.editingInvoice.total || 0) / 1.07
+            }];
+        }
+
+        // Parse payment if it's a JSON string
+        if (typeof this.editingInvoice.payment === 'string') {
+            try {
+                this.editingInvoice.payment = JSON.parse(this.editingInvoice.payment);
+            } catch (e) {
+                this.editingInvoice.payment = null;
+            }
+        }
+        // ถ้า payment ไม่มีข้อมูล หรือ ไม่ได้เลือกช่องทางชำระเงินใดๆ ให้ default เป็นเงินสดเต็มจำนวน
+        if (!this.editingInvoice.payment || (!this.editingInvoice.payment.cash && !this.editingInvoice.payment.transfer)) {
+            this.editingInvoice.payment = {
+                cash: true,
+                cashAmount: this.editingInvoice.total || 0,
+                transfer: false,
+                transferAmount: 0
+            };
+        }
 
         // Create modal if not exists
         let modal = document.getElementById('editInvoiceModal');
@@ -2803,6 +2916,45 @@ const App = {
         const includeCopyEl = document.getElementById('historyIncludeCopy');
         const includeCopy = includeCopyEl ? includeCopyEl.checked : false;
 
+        // Parse items if it's a JSON string (from Google Sheets)
+        let items = invoice.items;
+        if (typeof items === 'string') {
+            try {
+                items = JSON.parse(items);
+            } catch (e) {
+                console.warn('Cannot parse items JSON:', e);
+                items = [];
+            }
+        }
+        // Ensure items is an array
+        if (!Array.isArray(items) || items.length === 0) {
+            items = [{
+                id: 1,
+                description: 'รายการสินค้า/บริการ',
+                quantity: 1,
+                price: invoice.total / 1.07
+            }];
+        }
+
+        // Parse payment if it's a JSON string
+        let payment = invoice.payment;
+        if (typeof payment === 'string') {
+            try {
+                payment = JSON.parse(payment);
+            } catch (e) {
+                payment = null;
+            }
+        }
+        // ถ้า payment ไม่มีข้อมูล หรือ ไม่ได้เลือกช่องทางชำระเงินใดๆ ให้ default เป็นเงินสดเต็มจำนวน
+        if (!payment || (!payment.cash && !payment.transfer)) {
+            payment = {
+                cash: true,
+                cashAmount: invoice.total || 0,
+                transfer: false,
+                transferAmount: 0
+            };
+        }
+
         const data = {
             invoiceNumber: invoice.invoiceNumber,
             date: invoice.date,
@@ -2814,19 +2966,8 @@ const App = {
             },
             branchType: invoice.branchType || 'hq',
             branchNumber: invoice.branchNumber || '',
-            // ถ้าไม่มีข้อมูล payment ให้แสดงเป็นเงินสดเต็มจำนวน (สำหรับใบกำกับเก่า)
-            payment: invoice.payment || {
-                cash: true,
-                cashAmount: invoice.total || 0,
-                transfer: false,
-                transferAmount: 0
-            },
-            items: invoice.items || [{
-                id: 1,
-                description: 'รายการสินค้า/บริการ',
-                quantity: 1,
-                price: invoice.total / 1.07
-            }],
+            payment: payment,
+            items: items,
             subtotal: invoice.subtotal,
             vat: invoice.vat,
             total: invoice.total,
@@ -3155,6 +3296,44 @@ const App = {
             if (this.emailInvoiceData) {
                 // ส่งจากหน้าประวัติ - ใช้ข้อมูลที่เก็บไว้
                 const inv = this.emailInvoiceData;
+
+                // Parse items if it's a JSON string
+                let items = inv.items;
+                if (typeof items === 'string') {
+                    try {
+                        items = JSON.parse(items);
+                    } catch (e) {
+                        items = [];
+                    }
+                }
+                if (!Array.isArray(items) || items.length === 0) {
+                    items = [{
+                        id: 1,
+                        description: 'รายการสินค้า/บริการ',
+                        quantity: 1,
+                        price: (inv.total || 0) / 1.07
+                    }];
+                }
+
+                // Parse payment if it's a JSON string
+                let payment = inv.payment;
+                if (typeof payment === 'string') {
+                    try {
+                        payment = JSON.parse(payment);
+                    } catch (e) {
+                        payment = null;
+                    }
+                }
+                // ถ้า payment ไม่มีข้อมูล หรือ ไม่ได้เลือกช่องทางชำระเงินใดๆ ให้ default เป็นเงินสดเต็มจำนวน
+                if (!payment || (!payment.cash && !payment.transfer)) {
+                    payment = {
+                        cash: true,
+                        cashAmount: inv.total || 0,
+                        transfer: false,
+                        transferAmount: 0
+                    };
+                }
+
                 invoiceData = {
                     invoiceNumber: inv.invoiceNumber,
                     date: inv.date,
@@ -3166,8 +3345,8 @@ const App = {
                     },
                     branchType: inv.branchType || 'hq',
                     branchNumber: inv.branchNumber || '',
-                    payment: inv.payment || { cash: true, cashAmount: inv.total, transfer: false, transferAmount: 0 },
-                    items: typeof inv.items === 'string' ? JSON.parse(inv.items) : (inv.items || []),
+                    payment: payment,
+                    items: items,
                     subtotal: inv.subtotal || 0,
                     vat: inv.vat || 0,
                     total: inv.total || 0
@@ -3207,8 +3386,8 @@ const App = {
                 };
             }
 
-            // สร้าง HTML สำหรับ PDF
-            const invoiceHtml = Invoice.generatePDFInlineContent(invoiceData, company, logo, signature);
+            // สร้าง HTML สำหรับ PDF (ใช้รูปแบบเดียวกับ Print/Preview)
+            const invoiceHtml = Invoice.generateEmailPDFHTML(invoiceData, company, logo, signature);
 
             // ส่งข้อมูลไป Apps Script
             const emailPayload = {

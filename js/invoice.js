@@ -550,7 +550,11 @@ const Invoice = {
         const { invoiceNumber, date, customer, items, subtotal, vat, total } = data;
         const branchType = data.branchType || 'hq';
         const branchNumber = data.branchNumber || '';
-        const payment = data.payment || { cash: false, cashAmount: 0, transfer: false, transferAmount: 0 };
+        // ถ้า payment ไม่มีข้อมูล หรือ ไม่ได้เลือกช่องทางชำระเงินใดๆ ให้ default เป็นเงินสดเต็มจำนวน
+        let payment = data.payment;
+        if (!payment || (!payment.cash && !payment.transfer)) {
+            payment = { cash: true, cashAmount: total || 0, transfer: false, transferAmount: 0 };
+        }
 
         const company = Storage.getCompany();
         const logo = Storage.getLogo();
@@ -790,7 +794,11 @@ const Invoice = {
         const { invoiceNumber, date, customer, items, subtotal, vat, total } = data;
         const branchType = data.branchType || 'hq';
         const branchNumber = data.branchNumber || '';
-        const payment = data.payment || { cash: false, cashAmount: 0, transfer: false, transferAmount: 0 };
+        // ถ้า payment ไม่มีข้อมูล หรือ ไม่ได้เลือกช่องทางชำระเงินใดๆ ให้ default เป็นเงินสดเต็มจำนวน
+        let payment = data.payment;
+        if (!payment || (!payment.cash && !payment.transfer)) {
+            payment = { cash: true, cashAmount: total || 0, transfer: false, transferAmount: 0 };
+        }
 
         const branchDisplay = branchType === 'hq' ? '☑ สำนักงานใหญ่' : `☑ สาขาที่ ${branchNumber || '-'}`;
 
@@ -900,6 +908,313 @@ const Invoice = {
                     </div>
                 </div>
             </div>
+        `;
+    },
+
+    /**
+     * สร้าง HTML สำหรับ PDF ที่ส่ง Email (ใช้รูปแบบเดียวกับ Print/Preview)
+     * รวม CSS styles ไว้ใน document เพื่อให้ Google Apps Script สร้าง PDF ได้ถูกต้อง
+     */
+    generateEmailPDFHTML(data, company, logo, signature) {
+        const { invoiceNumber, date, customer, items, subtotal, vat, total } = data;
+        // Validate branchType - ต้องเป็น 'hq' หรือ 'branch' เท่านั้น ถ้าไม่ใช่ให้ default เป็น 'hq'
+        const branchTypeRaw = data.branchType || '';
+        const branchType = (branchTypeRaw === 'hq' || branchTypeRaw === 'branch') ? branchTypeRaw : 'hq';
+        const branchNumber = branchType === 'branch' ? (data.branchNumber || '') : '';
+
+        // ถ้า payment ไม่มีข้อมูล หรือ ไม่ได้เลือกช่องทางชำระเงินใดๆ ให้ default เป็นเงินสดเต็มจำนวน
+        let payment = data.payment;
+        if (!payment || (!payment.cash && !payment.transfer)) {
+            payment = { cash: true, cashAmount: total || 0, transfer: false, transferAmount: 0 };
+        }
+
+        const branchDisplay = branchType === 'hq' ? '☑ สำนักงานใหญ่' : `☑ สาขาที่ ${branchNumber || '-'}`;
+
+        // Generate items rows
+        const itemsHTML = items.map((item, index) => {
+            const priceWithVat = (item.quantity || 0) * (item.price || 0);
+            const priceBeforeVat = priceWithVat / 1.07;
+            return `
+                <tr>
+                    <td class="text-center">${index + 1}</td>
+                    <td>${item.description || ''}</td>
+                    <td class="text-center">${item.quantity || 0}</td>
+                    <td class="text-right">${this.formatCurrency(priceBeforeVat)}</td>
+                </tr>
+            `;
+        }).join('');
+
+        const cashChecked = payment.cash ? '☑' : '☐';
+        const transferChecked = payment.transfer ? '☑' : '☐';
+        const cashAmountDisplay = payment.cash && payment.cashAmount > 0 ? this.formatCurrency(payment.cashAmount) : '________';
+        const transferAmountDisplay = payment.transfer && payment.transferAmount > 0 ? this.formatCurrency(payment.transferAmount) : '________';
+
+        return `
+            <!DOCTYPE html>
+            <html lang="th">
+            <head>
+                <meta charset="UTF-8">
+                <title>ใบกำกับภาษี ${invoiceNumber}</title>
+                <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600&display=swap" rel="stylesheet">
+                <style>
+                    * { margin: 0; padding: 0; box-sizing: border-box; }
+                    @page { size: A5; margin: 5mm; }
+                    body { 
+                        font-family: 'Prompt', 'Sarabun', sans-serif; 
+                        font-size: 9pt;
+                        background: white;
+                        color: #333;
+                        padding: 10px;
+                    }
+                    .invoice-a5 {
+                        font-size: 9pt;
+                    }
+                    .invoice-header {
+                        text-align: center;
+                        border-bottom: 2px solid #1a5490;
+                        padding-bottom: 5px;
+                        margin-bottom: 8px;
+                    }
+                    .invoice-title {
+                        font-size: 14pt;
+                        font-weight: 600;
+                        color: #1a5490;
+                    }
+                    .company-section {
+                        display: flex;
+                        gap: 10px;
+                        margin-bottom: 8px;
+                        padding: 5px;
+                        background: #f8f9fa;
+                        border-radius: 3px;
+                    }
+                    .company-logo img {
+                        max-width: 50px;
+                        max-height: 50px;
+                    }
+                    .company-info {
+                        flex: 1;
+                        font-size: 9pt;
+                    }
+                    .company-name {
+                        font-size: 12pt;
+                        font-weight: 600;
+                        color: #1a5490;
+                    }
+                    .info-section {
+                        display: flex;
+                        gap: 8px;
+                        margin-bottom: 8px;
+                    }
+                    .customer-box, .invoice-box {
+                        border: 1px solid #ddd;
+                        padding: 5px;
+                        border-radius: 3px;
+                    }
+                    .customer-box { flex: 2; }
+                    .invoice-box { flex: 1; }
+                    .info-label {
+                        color: #666;
+                        font-size: 8pt;
+                    }
+                    .info-value { font-weight: 500; }
+                    .customer-name {
+                        font-size: 11pt;
+                        color: #1a5490;
+                        font-weight: 600;
+                    }
+                    .info-row {
+                        display: flex;
+                        gap: 5px;
+                        align-items: center;
+                        margin-top: 2px;
+                    }
+                    .date-value, .invoice-no {
+                        background: #e8f4fd;
+                        padding: 1px 6px;
+                        border-radius: 3px;
+                        font-weight: 600;
+                    }
+                    .items-table {
+                        width: 100%;
+                        border-collapse: collapse;
+                        margin-bottom: 8px;
+                        font-size: 9pt;
+                    }
+                    .items-table th {
+                        background: #1a5490;
+                        color: white;
+                        padding: 5px;
+                        text-align: center;
+                        font-size: 8pt;
+                    }
+                    .items-table td {
+                        border: 1px solid #ddd;
+                        padding: 4px;
+                    }
+                    .col-no { width: 8%; }
+                    .col-desc { width: 50%; }
+                    .col-qty { width: 15%; }
+                    .col-amount { width: 27%; }
+                    .text-center { text-align: center; }
+                    .text-right { text-align: right; }
+                    .summary-section {
+                        display: flex;
+                        gap: 15px;
+                        margin-bottom: 8px;
+                    }
+                    .summary-left {
+                        flex: 1;
+                        font-size: 9pt;
+                    }
+                    .summary-right {
+                        width: 140px;
+                    }
+                    .thai-text-row { margin-bottom: 5px; }
+                    .payment-row { margin: 3px 0; }
+                    .checkbox { display: inline-block; width: 12px; }
+                    .amount-box {
+                        display: inline-block;
+                        border-bottom: 1px solid #333;
+                        min-width: 70px;
+                        text-align: center;
+                        font-weight: 600;
+                    }
+                    .total-row {
+                        display: flex;
+                        justify-content: space-between;
+                        padding: 3px 6px;
+                        border: 1px solid #ddd;
+                        font-size: 9pt;
+                    }
+                    .total-row.grand {
+                        background: #333333;
+                        color: white;
+                        font-weight: 600;
+                    }
+                    .total-row .amount {
+                        font-weight: 600;
+                        min-width: 65px;
+                        text-align: right;
+                    }
+                    .signature-section {
+                        text-align: center;
+                        margin-top: 15px;
+                    }
+                    .signature-box {
+                        display: inline-flex;
+                        flex-direction: column;
+                        align-items: center;
+                        min-width: 150px;
+                    }
+                    .signature-img {
+                        max-width: 120px;
+                        max-height: 50px;
+                        margin-bottom: 5px;
+                    }
+                    .signature-line {
+                        width: 150px;
+                        border-bottom: 1px solid #333;
+                        margin-bottom: 3px;
+                    }
+                    .signature-label {
+                        font-size: 9pt;
+                        text-align: center;
+                    }
+                </style>
+            </head>
+            <body>
+                <div class="invoice-a5">
+                    <div class="invoice-header">
+                        <h1 class="invoice-title">ใบกำกับภาษี / ใบเสร็จรับเงิน (Tax Invoice / Receipt)</h1>
+                    </div>
+                    <div class="company-section">
+                        <div class="company-logo">
+                            ${logo ? `<img src="${logo}" alt="Logo">` : ''}
+                        </div>
+                        <div class="company-info">
+                            <div class="company-name">${company.name || 'ชื่อบริษัท/ร้านค้า'}</div>
+                            <div>${company.address || 'ที่อยู่'}</div>
+                            <div>โทร. ${company.phone || '-'}</div>
+                            <div>Tax ID : ${company.taxId || '-'}</div>
+                        </div>
+                    </div>
+                    <div class="info-section">
+                        <div class="customer-box">
+                            <div class="info-label">ชื่อผู้รับบริการ/Customer:</div>
+                            <div class="info-value customer-name">${customer.name || '-'}</div>
+                            <div class="info-label">ที่อยู่/Address:</div>
+                            <div class="info-value">${customer.address || '-'}</div>
+                            <div class="info-row">
+                                <span class="info-label">Tax ID:</span>
+                                <span class="info-value">${customer.taxId || '-'}</span>
+                            </div>
+                            <div class="info-row">${branchDisplay}</div>
+                        </div>
+                        <div class="invoice-box">
+                            <div class="info-row">
+                                <span class="info-label">วันที่:</span>
+                                <span class="info-value date-value">${this.formatDateShort(date)}</span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-label">เลขที่:</span>
+                                <span class="info-value invoice-no">${invoiceNumber}</span>
+                            </div>
+                        </div>
+                    </div>
+                    <table class="items-table">
+                        <thead>
+                            <tr>
+                                <th class="col-no">ลำดับ</th>
+                                <th class="col-desc">รายละเอียด</th>
+                                <th class="col-qty">จำนวน</th>
+                                <th class="col-amount">จำนวนเงิน</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${itemsHTML || '<tr><td colspan="4" class="text-center">-</td></tr>'}
+                        </tbody>
+                    </table>
+                    <div class="summary-section">
+                        <div class="summary-left">
+                            <div class="thai-text-row">
+                                <span class="label">ตัวอักษร.</span>
+                                <span class="value">( ${this.amountToThaiText(total)} )</span>
+                            </div>
+                            <div class="payment-row">
+                                <span class="checkbox">${cashChecked}</span> เงินสด
+                                <span class="amount-box">${cashAmountDisplay}</span> บาท
+                            </div>
+                            <div class="payment-row">
+                                <span class="checkbox">${transferChecked}</span> เงินโอน
+                                <span class="amount-box">${transferAmountDisplay}</span> บาท
+                            </div>
+                        </div>
+                        <div class="summary-right" style="width: 140px;">
+                            <div style="display: flex; justify-content: space-between; padding: 3px 6px; border: 1px solid #ddd; font-size: 9pt;">
+                                <span>จำนวนเงินรวม</span>
+                                <span style="font-weight: 600; min-width: 65px; text-align: right;">${this.formatCurrency(subtotal)}</span>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; padding: 3px 6px; border: 1px solid #ddd; border-top: none; font-size: 9pt;">
+                                <span>VAT 7%</span>
+                                <span style="font-weight: 600; min-width: 65px; text-align: right;">${this.formatCurrency(vat)}</span>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; padding: 3px 6px; background-color: #333333; color: white; font-weight: 600; font-size: 9pt;">
+                                <span>รวมทั้งสิ้น</span>
+                                <span style="font-weight: 600; min-width: 65px; text-align: right;">${this.formatCurrency(total)}</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="signature-section">
+                        <div class="signature-box">
+                            ${signature ? `<img class="signature-img" src="${signature}" alt="Signature">` : '<div style="height: 50px;"></div>'}
+                            <div class="signature-line"></div>
+                            <div class="signature-label">ผู้รับเงิน</div>
+                        </div>
+                    </div>
+                </div>
+            </body>
+            </html>
         `;
     },
 

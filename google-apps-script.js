@@ -166,13 +166,17 @@ function addInvoice(invoice) {
     // สร้าง Sheet ถ้ายังไม่มี
     if (!sheet) {
         sheet = ss.insertSheet(CONFIG.INVOICES_SHEET);
-        // เพิ่ม Header
+        // เพิ่ม Header (รวมคอลัมน์การชำระเงิน)
         sheet.appendRow([
             'เลขที่ใบกำกับ', 'วันที่', 'ลูกค้า', 'ที่อยู่', 'เลขผู้เสียภาษี',
-            'ราคารวม', 'VAT', 'รวมทั้งสิ้น', 'รายการ', 'สร้างเมื่อ'
+            'ราคารวม', 'VAT', 'รวมทั้งสิ้น', 'รายการ', 'สร้างเมื่อ',
+            'เงินสด', 'จำนวนเงินสด', 'เงินโอน', 'จำนวนเงินโอน'
         ]);
-        sheet.getRange(1, 1, 1, 10).setFontWeight('bold');
+        sheet.getRange(1, 1, 1, 14).setFontWeight('bold');
     }
+
+    // ดึงข้อมูลการชำระเงิน
+    const payment = invoice.payment || { cash: true, cashAmount: invoice.total || 0, transfer: false, transferAmount: 0 };
 
     // เพิ่มข้อมูลใบกำกับ - ใส่ ' นำหน้า customerTaxId เพื่อบังคับเป็น Text
     const taxIdValue = invoice.customerTaxId ? "'" + String(invoice.customerTaxId) : '';
@@ -186,8 +190,12 @@ function addInvoice(invoice) {
         invoice.subtotal || 0,
         invoice.vat || 0,
         invoice.total || 0,
-        invoice.items || '[]',
-        new Date().toISOString()
+        invoice.items ? JSON.stringify(invoice.items) : '[]',
+        new Date().toISOString(),
+        payment.cash ? 'Yes' : 'No',
+        payment.cashAmount || 0,
+        payment.transfer ? 'Yes' : 'No',
+        payment.transferAmount || 0
     ]);
 
     return { success: true, message: 'บันทึกใบกำกับภาษีสำเร็จ' };
