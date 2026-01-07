@@ -280,7 +280,19 @@ const App = {
 
         // Invoice date
         document.getElementById('invoiceDate').valueAsDate = new Date();
-        document.getElementById('invoiceDate').addEventListener('change', () => this.updatePreview());
+        document.getElementById('invoiceDate').addEventListener('change', async (e) => {
+            // Sync เลขใบกำกับใหม่ตามวันที่ที่เลือก
+            await this.syncInvoiceNumber(e.target.value);
+            this.updatePreview();
+        });
+
+        // Sync invoice number button
+        document.getElementById('syncInvoiceBtn').addEventListener('click', async () => {
+            const date = document.getElementById('invoiceDate').value;
+            this.showToast('กำลังดึงเลขใบกำกับ...', 'info');
+            await this.syncInvoiceNumber(date);
+            this.showToast('ดึงเลขใบกำกับสำเร็จ', 'success');
+        });
 
         // Add item button
         document.getElementById('addItemBtn').addEventListener('click', () => this.addItem());

@@ -76,7 +76,12 @@
                                     <div class="form-row">
                                         <div class="form-group">
                                             <label>เลขที่ใบกำกับ</label>
-                                            <input type="text" id="invoiceNumber" readonly>
+                                            <div style="display: flex; gap: 8px; align-items: center;">
+                                                <input type="text" id="invoiceNumber" readonly style="flex: 1;">
+                                                <button type="button" class="btn btn-secondary btn-sm"
+                                                    id="syncInvoiceBtn"
+                                                    title="ดึงเลขล่าสุดจาก Google Sheets">🔄</button>
+                                            </div>
                                         </div>
                                         <div class="form-group">
                                             <label>วันที่</label>
