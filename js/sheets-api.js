@@ -235,6 +235,46 @@ const SheetsAPI = {
     },
 
     /**
+     * ดึงเลขใบกำกับล่าสุดสำหรับวันที่ที่กำหนด
+     * @param {string} date - วันที่ในรูปแบบ YYYY-MM-DD หรือ YYMMDD
+     * @returns {Object} { success, datePrefix, latestNumber, nextNumber, nextInvoiceNumber }
+     */
+    async getLatestInvoiceNumber(date) {
+        const settings = Storage.getSettings();
+        if (!settings.scriptUrl) {
+            console.warn('No script URL, using local counter');
+            return { success: false, error: 'No script URL' };
+        }
+
+        try {
+            const response = await fetch(settings.scriptUrl, {
+                method: 'POST',
+                redirect: 'follow',
+                headers: {
+                    'Content-Type': 'text/plain;charset=utf-8'
+                },
+                body: JSON.stringify({
+                    action: 'getLatestInvoiceNumber',
+                    data: { date: date }
+                })
+            });
+
+            try {
+                const result = await response.json();
+                console.log('Latest invoice number from Sheets:', result);
+                return result;
+            } catch (e) {
+                // CORS issue - try no-cors mode
+                console.warn('Cannot parse response, trying no-cors');
+                return { success: false, error: 'Cannot parse response' };
+            }
+        } catch (error) {
+            console.error('Error fetching latest invoice number:', error);
+            return { success: false, error: error.message };
+        }
+    },
+
+    /**
      * บันทึกลูกค้าใหม่ไปยัง Google Sheets (ผ่าน Apps Script)
      */
     async saveCustomer(customer, isUpdate = false) {
