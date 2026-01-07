@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="th">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>เข้าสู่ระบบ - ระบบพิมพ์บิลและใบกำกับภาษี</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/styles.css">
+    <style>
+        /* Login Page Specific Styles */
+        .login-page {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, #1a365d 0%, #2c5282 50%, #3182ce 100%);
+            padding: 20px;
+        }
+
+        .login-container {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.4);
+            padding: 50px 40px;
+            width: 100%;
+            max-width: 420px;
+            animation: slideUp 0.5s ease-out;
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .login-header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        .login-logo {
+            width: 80px;
+            height: 80px;
+            background: linear-gradient(135deg, #3182ce 0%, #2c5282 100%);
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 20px;
+            font-size: 40px;
+            box-shadow: 0 10px 30px rgba(49, 130, 206, 0.3);
+        }
+
+        .login-title {
+            font-size: 24px;
+            font-weight: 600;
+            color: #1a365d;
+            margin-bottom: 8px;
+        }
+
+        .login-subtitle {
+            font-size: 14px;
+            color: #718096;
+        }
+
+        .login-form {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .form-group-login {
+            position: relative;
+        }
+
+        .form-group-login label {
+            display: block;
+            font-size: 14px;
+            font-weight: 500;
+            color: #4a5568;
+            margin-bottom: 8px;
+        }
+
+        .form-group-login input {
+            width: 100%;
+            padding: 14px 16px;
+            padding-left: 45px;
+            border: 2px solid #e2e8f0;
+            border-radius: 12px;
+            font-size: 16px;
+            font-family: 'Prompt', sans-serif;
+            transition: all 0.3s ease;
+            background: #f7fafc;
+        }
+
+        .form-group-login input:focus {
+            outline: none;
+            border-color: #3182ce;
+            background: #fff;
+            box-shadow: 0 0 0 4px rgba(49, 130, 206, 0.1);
+        }
+
+        .form-group-login .input-icon {
+            position: absolute;
+            left: 14px;
+            top: 42px;
+            font-size: 18px;
+            color: #a0aec0;
+            pointer-events: none;
+        }
+
+        .login-btn {
+            background: linear-gradient(135deg, #3182ce 0%, #2c5282 100%);
+            color: white;
+            border: none;
+            padding: 16px;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 600;
+            font-family: 'Prompt', sans-serif;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-top: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .login-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(49, 130, 206, 0.4);
+        }
+
+        .login-btn:active {
+            transform: translateY(0);
+        }
+
+        .login-btn:disabled {
+            opacity: 0.7;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .login-btn .spinner {
+            width: 20px;
+            height: 20px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-top-color: white;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            display: none;
+        }
+
+        .login-btn.loading .spinner {
+            display: block;
+        }
+
+        .login-btn.loading .btn-text {
+            display: none;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        .error-message {
+            background: #fed7d7;
+            border: 1px solid #fc8181;
+            color: #c53030;
+            padding: 12px 16px;
+            border-radius: 10px;
+            font-size: 14px;
+            display: none;
+            align-items: center;
+            gap: 10px;
+            animation: shake 0.5s ease;
+        }
+
+        .error-message.show {
+            display: flex;
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            20%, 60% { transform: translateX(-5px); }
+            40%, 80% { transform: translateX(5px); }
+        }
+
+        .login-footer {
+            text-align: center;
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #e2e8f0;
+        }
+
+        .login-footer p {
+            font-size: 12px;
+            color: #a0aec0;
+        }
+
+        /* Password visibility toggle */
+        .password-toggle {
+            position: absolute;
+            right: 14px;
+            top: 42px;
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 18px;
+            color: #a0aec0;
+            padding: 0;
+            transition: color 0.3s;
+        }
+
+        .password-toggle:hover {
+            color: #4a5568;
+        }
+    </style>
+</head>
+
+<body class="login-page">
+    <div class="login-container">
+        <div class="login-header">
+            <div class="login-logo">🧾</div>
+            <h1 class="login-title">ระบบพิมพ์บิลและใบกำกับภาษี</h1>
+            <p class="login-subtitle">กรุณาเข้าสู่ระบบเพื่อใช้งาน</p>
+        </div>
+
+        <form class="login-form" id="loginForm">
+            <div class="error-message" id="errorMessage">
+                <span>⚠️</span>
+                <span id="errorText">ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง</span>
+            </div>
+
+            <div class="form-group-login">
+                <label for="username">ชื่อผู้ใช้</label>
+                <span class="input-icon">👤</span>
+                <input type="text" id="username" name="username" placeholder="กรอกชื่อผู้ใช้" required autocomplete="username">
+            </div>
+
+            <div class="form-group-login">
+                <label for="password">รหัสผ่าน</label>
+                <span class="input-icon">🔒</span>
+                <input type="password" id="password" name="password" placeholder="กรอกรหัสผ่าน" required autocomplete="current-password">
+                <button type="button" class="password-toggle" id="passwordToggle">👁️</button>
+            </div>
+
+            <button type="submit" class="login-btn" id="loginBtn">
+                <div class="spinner"></div>
+                <span class="btn-text">🚀 เข้าสู่ระบบ</span>
+            </button>
+        </form>
+
+        <div class="login-footer">
+            <p>© 2026 ระบบพิมพ์บิลและใบกำกับภาษี</p>
+        </div>
+    </div>
+
+    <script src="js/sheets-api.js"></script>
+    <script src="js/auth.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Check if already logged in
+            if (Auth.isLoggedIn()) {
+                window.location.href = 'index.html';
+                return;
+            }
+
+            const loginForm = document.getElementById('loginForm');
+            const loginBtn = document.getElementById('loginBtn');
+            const errorMessage = document.getElementById('errorMessage');
+            const errorText = document.getElementById('errorText');
+            const passwordToggle = document.getElementById('passwordToggle');
+            const passwordInput = document.getElementById('password');
+
+            // Password visibility toggle
+            passwordToggle.addEventListener('click', function() {
+                if (passwordInput.type === 'password') {
+                    passwordInput.type = 'text';
+                    passwordToggle.textContent = '🙈';
+                } else {
+                    passwordInput.type = 'password';
+                    passwordToggle.textContent = '👁️';
+                }
+            });
+
+            // Login form submit
+            loginForm.addEventListener('submit', async function(e) {
+                e.preventDefault();
+                
+                const username = document.getElementById('username').value.trim();
+                const password = document.getElementById('password').value;
+
+                if (!username || !password) {
+                    showError('กรุณากรอกชื่อผู้ใช้และรหัสผ่าน');
+                    return;
+                }
+
+                // Show loading state
+                loginBtn.classList.add('loading');
+                loginBtn.disabled = true;
+                hideError();
+
+                try {
+                    const result = await Auth.login(username, password);
+                    
+                    if (result.success) {
+                        // Redirect to main page
+                        window.location.href = 'index.html';
+                    } else {
+                        showError(result.error || 'ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง');
+                    }
+                } catch (error) {
+                    console.error('Login error:', error);
+                    showError('เกิดข้อผิดพลาดในการเชื่อมต่อ กรุณาลองใหม่อีกครั้ง');
+                } finally {
+                    loginBtn.classList.remove('loading');
+                    loginBtn.disabled = false;
+                }
+            });
+
+            function showError(message) {
+                errorText.textContent = message;
+                errorMessage.classList.add('show');
+            }
+
+            function hideError() {
+                errorMessage.classList.remove('show');
+            }
+        });
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,733 @@
+<!DOCTYPE html>
+<html lang="th">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ระบบพิมพ์บิลและใบกำกับภาษี</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="header-left">
+            <div class="logo-container" id="logoContainer">
+                <img src="" alt="Logo" id="logoPreview" class="logo-img hidden">
+                <button class="btn-delete-logo hidden" id="deleteLogoBtn" title="ลบโลโก้">✕</button>
+                <div class="logo-placeholder" id="logoPlaceholder">
+                    <span class="logo-icon">🏪</span>
+                    <span>อัปโหลดโลโก้</span>
+                    <small>แนะนำ: 200×80 px</small>
+                </div>
+                <input type="file" id="logoInput" accept="image/*" hidden>
+            </div>
+            <h1 class="app-title">ระบบพิมพ์บิลและใบกำกับภาษี</h1>
+        </div>
+        <div class="header-right">
+            <!-- User Info -->
+            <div class="user-info" id="userInfo"
+                style="display: flex; align-items: center; gap: 10px; margin-right: 15px;">
+                <span id="userDisplayName" style="font-size: 14px; color: #cbd5e1;">👤 -</span>
+            </div>
+            <button class="btn btn-icon" id="dashboardBtn" title="Dashboard">
+                <span>📊</span>
+            </button>
+            <button class="btn btn-icon" id="historyBtn" title="ประวัติใบกำกับ">
+                <span>📋</span>
+            </button>
+            <button class="btn btn-icon" id="settingsBtn" title="ตั้งค่า">
+                <span>⚙️</span>
+            </button>
+            <button class="btn btn-icon btn-logout" id="logoutBtn" title="ออกจากระบบ" style="color: #f87171;">
+                <span>🚪</span>
+            </button>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <!-- Navigation Tabs -->
+        <nav class="nav-tabs">
+            <button class="tab-btn active" data-tab="invoice">🧾 สร้างใบกำกับภาษี</button>
+            <button class="tab-btn" data-tab="customers">👥 จัดการลูกค้า</button>
+            <button class="tab-btn" data-tab="dashboard">📊 Dashboard</button>
+            <button class="tab-btn" data-tab="history">📋 ประวัติใบกำกับ</button>
+        </nav>
+
+        <!-- Tab Contents -->
+        <div class="tab-contents">
+            <!-- Invoice Tab -->
+            <div class="tab-content active" id="invoiceTab">
+                <div class="invoice-layout">
+                    <!-- Left Panel - Form -->
+                    <div class="form-panel">
+                        <div class="card">
+                            <div class="card-header">
+                                <h2>📝 ข้อมูลใบกำกับภาษี</h2>
+                            </div>
+                            <div class="card-body">
+                                <!-- Invoice Info -->
+                                <div class="form-section">
+                                    <h3>ข้อมูลใบกำกับ</h3>
+                                    <div class="form-row">
+                                        <div class="form-group">
+                                            <label>เลขที่ใบกำกับ</label>
+                                            <input type="text" id="invoiceNumber" readonly>
+                                        </div>
+                                        <div class="form-group">
+                                            <label>วันที่</label>
+                                            <input type="date" id="invoiceDate">
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Customer Info -->
+                                <div class="form-section">
+                                    <h3>ข้อมูลลูกค้า</h3>
+                                    <div class="form-group">
+                                        <label>ค้นหาลูกค้า</label>
+                                        <div class="search-container">
+                                            <input type="text" id="customerSearch"
+                                                placeholder="พิมพ์ชื่อหรือรหัสลูกค้า...">
+                                            <div class="search-results" id="customerResults"></div>
+                                        </div>
+                                        <button class="btn btn-secondary btn-sm" id="newCustomerBtn">+
+                                            เพิ่มลูกค้าใหม่</button>
+                                    </div>
+                                    <div class="form-group">
+                                        <label>ชื่อลูกค้า/บริษัท <span class="required">*</span></label>
+                                        <input type="text" id="customerName" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label>ที่อยู่</label>
+                                        <textarea id="customerAddress" rows="2"></textarea>
+                                    </div>
+                                    <div class="form-row">
+                                        <div class="form-group">
+                                            <label>เลขประจำตัวผู้เสียภาษี</label>
+                                            <input type="text" id="customerTaxId" maxlength="13">
+                                        </div>
+                                        <div class="form-group">
+                                            <label>เบอร์โทรศัพท์</label>
+                                            <input type="tel" id="customerPhone">
+                                        </div>
+                                    </div>
+                                    <!-- Branch Selection -->
+                                    <div class="form-row">
+                                        <div class="form-group">
+                                            <label>ประเภทสำนักงาน</label>
+                                            <div class="radio-group">
+                                                <label class="radio-label">
+                                                    <input type="radio" name="branchType" id="branchTypeHQ" value="hq"
+                                                        checked>
+                                                    <span>สำนักงานใหญ่</span>
+                                                </label>
+                                                <label class="radio-label">
+                                                    <input type="radio" name="branchType" id="branchTypeBranch"
+                                                        value="branch">
+                                                    <span>สาขาที่</span>
+                                                </label>
+                                            </div>
+                                        </div>
+                                        <div class="form-group" id="branchNumberGroup" style="display: none;">
+                                            <label>เลขที่สาขา</label>
+                                            <input type="text" id="branchNumber" placeholder="เช่น 00015" maxlength="5">
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Items -->
+                                <div class="form-section">
+                                    <h3>รายการสินค้า/บริการ</h3>
+                                    <div class="items-table-container">
+                                        <table class="items-table" id="itemsTable">
+                                            <thead>
+                                                <tr>
+                                                    <th>ลำดับ</th>
+                                                    <th>รายการ</th>
+                                                    <th>จำนวน</th>
+                                                    <th>ราคา/หน่วย</th>
+                                                    <th>รวม</th>
+                                                    <th></th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="itemsBody">
+                                                <!-- Items will be added here -->
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                    <button class="btn btn-secondary" id="addItemBtn">+ เพิ่มรายการ</button>
+                                </div>
+
+                                <!-- Totals -->
+                                <div class="totals-section">
+                                    <div class="total-row">
+                                        <span>ราคารวม</span>
+                                        <span id="subtotal">0.00 บาท</span>
+                                    </div>
+                                    <div class="total-row">
+                                        <span>VAT 7%</span>
+                                        <span id="vatAmount">0.00 บาท</span>
+                                    </div>
+                                    <div class="total-row grand-total">
+                                        <span>รวมทั้งสิ้น</span>
+                                        <span id="grandTotal">0.00 บาท</span>
+                                    </div>
+                                    <div class="total-text" id="totalText">
+                                        (ศูนย์บาทถ้วน)
+                                    </div>
+                                </div>
+
+                                <!-- Payment Method -->
+                                <div class="form-section">
+                                    <h3>💵 การรับชำระเงิน</h3>
+                                    <div class="payment-options">
+                                        <div class="payment-option">
+                                            <label class="checkbox-label">
+                                                <input type="checkbox" id="paymentCash" checked>
+                                                <span>เงินสด</span>
+                                            </label>
+                                            <input type="number" id="paymentCashAmount" class="payment-amount"
+                                                placeholder="จำนวนเงิน" step="0.01">
+                                            <span class="payment-unit">บาท</span>
+                                        </div>
+                                        <div class="payment-option">
+                                            <label class="checkbox-label">
+                                                <input type="checkbox" id="paymentTransfer">
+                                                <span>เงินโอน</span>
+                                            </label>
+                                            <input type="number" id="paymentTransferAmount" class="payment-amount"
+                                                placeholder="จำนวนเงิน" step="0.01" disabled>
+                                            <span class="payment-unit">บาท</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Right Panel - Preview -->
+                    <div class="preview-panel">
+                        <div class="card">
+                            <div class="card-header">
+                                <h2>👁️ ตัวอย่างใบกำกับภาษี</h2>
+                            </div>
+                            <div class="card-body">
+                                <div class="invoice-preview" id="invoicePreview">
+                                    <!-- Preview content will be generated here -->
+                                </div>
+                            </div>
+                            <div class="card-footer">
+                                <div class="print-options" style="display: none;">
+                                    <label class="checkbox-label">
+                                        <input type="checkbox" id="includeCopy">
+                                        <span>พิมพ์สำเนา (ต้นฉบับ + สำเนา)</span>
+                                    </label>
+                                </div>
+                                <div class="print-buttons">
+                                    <button class="btn btn-primary btn-lg" id="printBtn" style="display: none;">
+                                        🖨️ พิมพ์
+                                    </button>
+                                    <button class="btn btn-secondary btn-lg" id="pdfBtn" style="display: none;">
+                                        📄 PDF
+                                    </button>
+                                    <button class="btn btn-success btn-lg" id="saveBtn" style="display: none;">
+                                        💾 บันทึก
+                                    </button>
+                                    <button class="btn btn-primary btn-lg" id="saveAndPrintBtn">
+                                        🖨️ บันทึก + พิมพ์
+                                    </button>
+                                    <button class="btn btn-info btn-lg" id="emailBtn" title="ส่ง Email พร้อม PDF"
+                                        style="display: none;">
+                                        📧 ส่ง Email
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Customers Tab -->
+            <div class="tab-content" id="customersTab">
+                <div class="card">
+                    <div class="card-header">
+                        <h2>👥 จัดการลูกค้า</h2>
+                        <button class="btn btn-primary" id="addCustomerBtn">+ เพิ่มลูกค้าใหม่</button>
+                    </div>
+                    <div class="card-body">
+                        <div class="search-bar">
+                            <input type="text" id="customerListSearch" placeholder="🔍 ค้นหาลูกค้า...">
+                            <button class="btn btn-secondary" id="refreshCustomersBtn">🔄 รีเฟรช</button>
+                        </div>
+                        <div class="customers-table-container">
+                            <table class="data-table" id="customersTable">
+                                <thead>
+                                    <tr>
+                                        <th>รหัส</th>
+                                        <th>ชื่อลูกค้า/บริษัท</th>
+                                        <th>เลขผู้เสียภาษี</th>
+                                        <th>เบอร์โทร</th>
+                                        <th>การจัดการ</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="customersBody">
+                                    <!-- Customers will be loaded here -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Dashboard Tab -->
+            <div class="tab-content" id="dashboardTab">
+                <div class="dashboard-grid">
+                    <!-- Date Filter Controls -->
+                    <div class="dashboard-filters card">
+                        <div class="card-body" style="padding: 15px;">
+                            <div class="filter-row"
+                                style="display: flex; flex-wrap: wrap; gap: 15px; align-items: center;">
+                                <div class="filter-group">
+                                    <label
+                                        style="font-size: 14px; font-weight: 500; color: #64748b; margin-right: 8px;">📅
+                                        เดือน:</label>
+                                    <select id="dashboardMonth" class="filter-select">
+                                        <option value="all">ทั้งปี</option>
+                                        <option value="1">มกราคม</option>
+                                        <option value="2">กุมภาพันธ์</option>
+                                        <option value="3">มีนาคม</option>
+                                        <option value="4">เมษายน</option>
+                                        <option value="5">พฤษภาคม</option>
+                                        <option value="6">มิถุนายน</option>
+                                        <option value="7">กรกฎาคม</option>
+                                        <option value="8">สิงหาคม</option>
+                                        <option value="9">กันยายน</option>
+                                        <option value="10">ตุลาคม</option>
+                                        <option value="11">พฤศจิกายน</option>
+                                        <option value="12">ธันวาคม</option>
+                                    </select>
+                                </div>
+                                <div class="filter-group">
+                                    <label
+                                        style="font-size: 14px; font-weight: 500; color: #64748b; margin-right: 8px;">📆
+                                        ปี:</label>
+                                    <select id="dashboardYear" class="filter-select">
+                                        <!-- Years will be populated by JavaScript -->
+                                    </select>
+                                </div>
+                                <div class="filter-divider" style="border-left: 1px solid #e2e8f0; height: 30px;"></div>
+                                <div class="filter-group">
+                                    <label
+                                        style="font-size: 14px; font-weight: 500; color: #64748b; margin-right: 8px;">🗓️
+                                        ช่วงวันที่:</label>
+                                    <input type="date" id="dashboardDateFrom" class="filter-input" title="จากวันที่">
+                                    <span style="color: #64748b;">ถึง</span>
+                                    <input type="date" id="dashboardDateTo" class="filter-input" title="ถึงวันที่">
+                                    <button class="btn btn-primary btn-sm" id="applyDateRangeBtn">กรอง</button>
+                                    <button class="btn btn-secondary btn-sm" id="resetFilterBtn">รีเซ็ต</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Stats Cards -->
+                    <div class="stats-row">
+                        <div class="stat-card">
+                            <div class="stat-icon">📄</div>
+                            <div class="stat-info">
+                                <h3 id="totalInvoices">0</h3>
+                                <p>ใบกำกับทั้งหมด</p>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon">💰</div>
+                            <div class="stat-info">
+                                <h3 id="totalSales">฿0</h3>
+                                <p>ยอดขายรวม</p>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon">📅</div>
+                            <div class="stat-info">
+                                <h3 id="todayInvoices">0</h3>
+                                <p>ใบกำกับวันนี้</p>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon">👥</div>
+                            <div class="stat-info">
+                                <h3 id="totalCustomers">0</h3>
+                                <p>ลูกค้าทั้งหมด</p>
+                            </div>
+                        </div>
+                        <div class="stat-card stat-card-vat">
+                            <div class="stat-icon">📋</div>
+                            <div class="stat-info">
+                                <h3 id="totalVat">฿0</h3>
+                                <p>ยอดรวม VAT</p>
+                            </div>
+                        </div>
+                        <div class="stat-card stat-card-danger">
+                            <div class="stat-icon">❌</div>
+                            <div class="stat-info">
+                                <h3 id="cancelledInvoices">0</h3>
+                                <p>ใบกำกับยกเลิก</p>
+                                <small id="cancelledAmount" class="stat-sub">฿0.00</small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Charts -->
+                    <div class="chart-container">
+                        <div class="card">
+                            <div class="card-header">
+                                <h2>📈 ยอดขายรายเดือน</h2>
+                            </div>
+                            <div class="card-body">
+                                <canvas id="salesChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Recent Invoices -->
+                    <div class="card">
+                        <div class="card-header">
+                            <h2>🕐 ใบกำกับล่าสุด</h2>
+                        </div>
+                        <div class="card-body">
+                            <table class="data-table" id="recentInvoicesTable">
+                                <thead>
+                                    <tr>
+                                        <th>เลขที่</th>
+                                        <th>วันที่</th>
+                                        <th>ลูกค้า</th>
+                                        <th>ยอดรวม</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="recentInvoicesBody">
+                                    <!-- Recent invoices will be loaded here -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- History Tab -->
+            <div class="tab-content" id="historyTab">
+                <div class="card">
+                    <div class="card-header">
+                        <h2>📋 ประวัติใบกำกับภาษี</h2>
+                    </div>
+                    <div class="card-body">
+                        <div class="search-bar">
+                            <input type="text" id="invoiceSearch" placeholder="🔍 ค้นหาเลขที่ใบกำกับ...">
+                            <input type="date" id="searchDateFrom" title="จากวันที่">
+                            <input type="date" id="searchDateTo" title="ถึงวันที่">
+                            <button class="btn btn-primary" id="searchInvoiceBtn">ค้นหา</button>
+                            <button class="btn btn-secondary" id="syncHistoryBtn" title="ดึงข้อมูลจาก Google Sheets">🔄
+                                Sync จาก Sheets</button>
+                            <button class="btn btn-danger" id="clearHistoryBtn" title="ลบประวัติทั้งหมดใน Local">🗑️
+                                ล้างข้อมูล</button>
+                            <div class="export-buttons" style="display: inline-flex; gap: 8px; margin-left: 10px;">
+                                <button class="btn btn-export-pdf" id="exportHistoryPdfBtn" title="ส่งออกเป็น PDF">
+                                    📄 PDF
+                                </button>
+                                <button class="btn btn-export-excel" id="exportHistoryExcelBtn"
+                                    title="ส่งออกเป็น Excel">
+                                    📊 Excel
+                                </button>
+                            </div>
+                            <label class="checkbox-label" style="margin-left: 15px; display: none;">
+                                <input type="checkbox" id="historyIncludeCopy">
+                                <span>พิมพ์สำเนา</span>
+                            </label>
+                        </div>
+                        <div class="history-table-container">
+                            <table class="data-table" id="historyTable">
+                                <thead>
+                                    <tr>
+                                        <th>เลขที่ใบกำกับ</th>
+                                        <th>วันที่</th>
+                                        <th>ลูกค้า</th>
+                                        <th>ยอดรวม</th>
+                                        <th>สถานะ</th>
+                                        <th>การจัดการ</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="historyBody">
+                                    <!-- History will be loaded here -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Settings Modal -->
+    <div class="modal" id="settingsModal">
+        <div class="modal-content modal-lg">
+            <div class="modal-header">
+                <h2>⚙️ ตั้งค่าระบบ</h2>
+                <button class="modal-close" id="closeSettingsBtn">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="settings-tabs">
+                    <button class="settings-tab active" data-settings="company">🏢 ข้อมูลบริษัท</button>
+                    <button class="settings-tab" data-settings="invoice">🧾 รูปแบบใบกำกับ</button>
+                    <button class="settings-tab" data-settings="sheets">📊 Google Sheets</button>
+                </div>
+
+                <!-- Company Settings -->
+                <div class="settings-content active" id="companySettings">
+                    <div class="form-group">
+                        <label>ชื่อบริษัท/ร้านค้า</label>
+                        <input type="text" id="companyName">
+                    </div>
+                    <div class="form-group">
+                        <label>ที่อยู่</label>
+                        <textarea id="companyAddress" rows="3"></textarea>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>เลขประจำตัวผู้เสียภาษี</label>
+                            <input type="text" id="companyTaxId" maxlength="13">
+                        </div>
+                        <div class="form-group">
+                            <label>เบอร์โทรศัพท์</label>
+                            <input type="tel" id="companyPhone">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Invoice Settings -->
+                <div class="settings-content" id="invoiceSettings">
+                    <div class="form-group">
+                        <label>รูปแบบเลขที่ใบกำกับ</label>
+                        <input type="text" id="invoicePrefix" placeholder="เช่น INV-2024-" disabled>
+                        <small class="form-hint">รูปแบบปัจจุบัน: YYMMDDXXXX (เช่น 2601070001)</small>
+                    </div>
+                    <div class="form-group">
+                        <label>🔢 เลขรันปัจจุบัน (สำหรับวันนี้)</label>
+                        <div style="display: flex; gap: 10px; align-items: center;">
+                            <input type="number" id="invoiceCurrentNumber" min="1" value="1" style="flex: 1;">
+                            <button type="button" class="btn btn-secondary" id="setInvoiceCounterBtn"
+                                style="white-space: nowrap;">
+                                ตั้งค่าเลขรัน
+                            </button>
+                        </div>
+                        <small class="form-hint">ใบถัดไปจะใช้เลขรันนี้ (กรณีต้องการแก้ไขเลขรัน)</small>
+                    </div>
+                    <div class="form-group" style="display: none;">
+                        <label>เลขที่เริ่มต้น (เก็บไว้)</label>
+                        <input type="number" id="invoiceStartNumber" min="1" value="1">
+                    </div>
+                    <div class="form-group" style="display: none;">
+                        <label>จำนวนหลักเลขที่ (ไม่ใช้แล้ว)</label>
+                        <select id="invoiceNumberPadding">
+                            <option value="3">3 หลัก (001)</option>
+                            <option value="4" selected>4 หลัก (0001)</option>
+                            <option value="5">5 หลัก (00001)</option>
+                            <option value="6">6 หลัก (000001)</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>หมวดหมู่รายการเริ่มต้น</label>
+                        <input type="text" id="defaultCategory" value="ค่าอาหารและเครื่องดื่ม">
+                    </div>
+
+                    <hr style="margin: 20px 0;">
+
+                    <!-- Signature Upload -->
+                    <div class="form-group">
+                        <label>✍️ ลายเซ็นผู้รับเงิน</label>
+                        <div class="signature-upload-area" id="signatureUploadArea">
+                            <img src="" alt="ลายเซ็น" id="signaturePreview" class="hidden"
+                                style="max-width: 150px; max-height: 60px;">
+                            <div id="signaturePlaceholder">
+                                <span>📝 คลิกเพื่ออัปโหลดลายเซ็น</span>
+                                <small>(รองรับ PNG, JPG)</small>
+                            </div>
+                            <input type="file" id="signatureInput" accept="image/*" hidden>
+                        </div>
+                        <button class="btn btn-secondary btn-sm" id="clearSignatureBtn" style="margin-top: 10px;">🗑️
+                            ลบลายเซ็น</button>
+                    </div>
+                </div>
+
+                <!-- Google Sheets Settings -->
+                <div class="settings-content" id="sheetsSettings">
+                    <div class="form-group">
+                        <label>Google Sheet URL (ข้อมูลลูกค้า)</label>
+                        <input type="url" id="sheetsUrl" placeholder="https://docs.google.com/spreadsheets/d/...">
+                        <small class="form-hint">ตั้งค่า Sheet เป็น "Anyone with the link can view"</small>
+                    </div>
+                    <div class="form-group">
+                        <label>Google Apps Script URL (สำหรับบันทึกข้อมูล)</label>
+                        <input type="url" id="scriptUrl" placeholder="https://script.google.com/macros/s/.../exec">
+                        <small class="form-hint">ใช้สำหรับเพิ่ม/แก้ไขลูกค้าและบันทึกใบกำกับ</small>
+                    </div>
+                    <div class="btn-group">
+                        <button class="btn btn-secondary" id="testConnectionBtn">🔗 ทดสอบการเชื่อมต่อ</button>
+                        <button class="btn btn-primary" id="syncDataBtn">🔄 ดึงข้อมูล</button>
+                    </div>
+                    <div class="connection-status" id="connectionStatus"></div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" id="cancelSettingsBtn">ยกเลิก</button>
+                <button class="btn btn-primary" id="saveSettingsBtn">💾 บันทึกการตั้งค่า</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Customer Modal -->
+    <div class="modal" id="customerModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="customerModalTitle">👤 เพิ่มลูกค้าใหม่</h2>
+                <button class="modal-close" id="closeCustomerBtn">&times;</button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="editCustomerId">
+                <div class="form-group">
+                    <label>รหัสลูกค้า</label>
+                    <input type="text" id="modalCustomerId">
+                </div>
+                <div class="form-group">
+                    <label>ชื่อลูกค้า/บริษัท <span class="required">*</span></label>
+                    <input type="text" id="modalCustomerName" required>
+                </div>
+                <div class="form-group">
+                    <label>ที่อยู่</label>
+                    <textarea id="modalCustomerAddress" rows="3"></textarea>
+                </div>
+                <div class="form-group">
+                    <label>เลขประจำตัวผู้เสียภาษี</label>
+                    <input type="text" id="modalCustomerTaxId" maxlength="13">
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>เบอร์โทรศัพท์</label>
+                        <input type="tel" id="modalCustomerPhone">
+                    </div>
+                    <div class="form-group">
+                        <label>Email</label>
+                        <input type="email" id="modalCustomerEmail">
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" id="cancelCustomerBtn">ยกเลิก</button>
+                <button class="btn btn-primary" id="saveCustomerBtn">💾 บันทึก</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Invoice Detail Modal -->
+    <div class="modal" id="invoiceDetailModal">
+        <div class="modal-content modal-lg">
+            <div class="modal-header">
+                <h2>📄 รายละเอียดใบกำกับภาษี</h2>
+                <button class="modal-close" id="closeDetailBtn">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="invoice-preview" id="invoiceDetailPreview">
+                    <!-- Invoice detail will be shown here -->
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" id="closeDetailModal">ปิด</button>
+                <button class="btn btn-primary" id="reprintBtn">🖨️ พิมพ์ซ้ำ</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Email Invoice Modal -->
+    <div class="modal" id="emailModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>📧 ส่งใบกำกับภาษีทาง Email</h2>
+                <button class="modal-close" id="closeEmailBtn">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="email-preview-info"
+                    style="background: #f7fafc; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+                    <p style="margin: 0 0 10px 0; font-weight: 600;">📄 ใบกำกับภาษี: <span
+                            id="emailInvoiceNumber">-</span></p>
+                    <p style="margin: 0 0 10px 0;">👤 ลูกค้า: <span id="emailCustomerName">-</span></p>
+                    <p style="margin: 0;">💰 ยอดรวม: <span id="emailTotal">฿0.00</span></p>
+                </div>
+
+                <div class="form-group">
+                    <label>📧 Email ลูกค้า <span class="required">*</span></label>
+                    <input type="email" id="recipientEmail" placeholder="customer@example.com" required>
+                    <small class="form-hint">กรุณาตรวจสอบ email ให้ถูกต้องก่อนส่ง</small>
+                </div>
+
+                <!-- Signature Upload Section -->
+                <div class="form-group">
+                    <label>✍️ ลายเซ็น (จะแนบใน PDF)</label>
+                    <div class="email-signature-area"
+                        style="border: 2px dashed #cbd5e1; border-radius: 8px; padding: 15px; text-align: center; cursor: pointer; transition: all 0.2s;"
+                        id="emailSignatureArea" onclick="document.getElementById('emailSignatureInput').click()">
+                        <img id="emailSignaturePreview" src="" alt="ลายเซ็น"
+                            style="max-width: 200px; max-height: 80px; display: none;">
+                        <div id="emailSignaturePlaceholder" style="color: #64748b;">
+                            <span style="font-size: 24px;">📝</span>
+                            <p style="margin: 5px 0 0 0; font-size: 14px;">คลิกเพื่อเลือกไฟล์ลายเซ็น
+                                หรือใช้ลายเซ็นที่ตั้งค่าไว้</p>
+                        </div>
+                        <input type="file" id="emailSignatureInput" accept="image/*" style="display: none;">
+                    </div>
+                    <small class="form-hint">ถ้าไม่เลือกใหม่ จะใช้ลายเซ็นจากการตั้งค่า (ถ้ามี)</small>
+                </div>
+
+                <div class="email-notice"
+                    style="background: #fffbeb; border: 1px solid #f59e0b; padding: 12px; border-radius: 8px; margin-top: 15px;">
+                    <p style="margin: 0; font-size: 14px; color: #92400e;">
+                        ⚠️ <strong>หมายเหตุ:</strong> ระบบจะส่ง email พร้อมแนบใบกำกับภาษีเป็นไฟล์ PDF ไปยัง email
+                        ที่ระบุ
+                    </p>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" id="cancelEmailBtn">ยกเลิก</button>
+                <button class="btn btn-primary" id="confirmSendEmailBtn">📧 ส่ง Email</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Loading Modal -->
+    <div class="modal" id="loadingModal" style="z-index: 9999;">
+        <div class="modal-content" style="max-width: 320px; text-align: center; padding: 30px;">
+            <div class="loading-spinner"></div>
+            <p id="loadingMessage" style="margin-top: 20px; font-size: 16px; color: #333;">
+                รอสักครู่ กำลังบันทึกข้อมูล...
+            </p>
+        </div>
+    </div>
+
+    <!-- Print Template (Hidden) -->
+    <div id="printTemplate" class="print-only">
+        <!-- Print content will be generated here -->
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <script src="js/storage.js"></script>
+    <script src="js/sheets-api.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/invoice.js"></script>
+    <script src="js/app.js"></script>
+</body>
+
+</html>
