@@ -202,34 +202,62 @@ function getLatestInvoiceNumber(payload) {
     const sheet = ss.getSheetByName(CONFIG.INVOICES_SHEET);
 
     if (!sheet) {
-        return { success: true, latestNumber: 0, message: 'ไม่พบ Sheet Invoices' };
+        return { success: true, latestNumber: 0, datePrefix: '', message: 'ไม่พบ Sheet Invoices' };
     }
 
     const data = sheet.getDataRange().getValues();
     if (data.length <= 1) {
-        return { success: true, latestNumber: 0, message: 'ยังไม่มีใบกำกับภาษี' };
+        return { success: true, latestNumber: 0, datePrefix: '', message: 'ยังไม่มีใบกำกับภาษี' };
     }
 
-    const prefix = payload && payload.prefix ? payload.prefix : 'INV-';
-    let maxNumber = 0;
+    // รับ datePrefix จาก payload (รูปแบบ YYMMDD เช่น 260107)
+    // ถ้าไม่ส่งมา ใช้วันที่ปัจจุบัน
+    let datePrefix = '';
+    if (payload && payload.datePrefix) {
+        datePrefix = String(payload.datePrefix);
+    } else if (payload && payload.date) {
+        // แปลง date เป็น YYMMDD
+        const d = new Date(payload.date);
+        const yy = d.getFullYear().toString().slice(-2);
+        const mm = (d.getMonth() + 1).toString().padStart(2, '0');
+        const dd = d.getDate().toString().padStart(2, '0');
+        datePrefix = yy + mm + dd;
+    } else {
+        // ใช้วันที่ปัจจุบัน
+        const d = new Date();
+        const yy = d.getFullYear().toString().slice(-2);
+        const mm = (d.getMonth() + 1).toString().padStart(2, '0');
+        const dd = d.getDate().toString().padStart(2, '0');
+        datePrefix = yy + mm + dd;
+    }
 
-    // หาเลขใบกำกับที่มากที่สุด (column A = เลขที่ใบกำกับ)
+    let maxRunningNumber = 0;
+
+    // หาเลขรันสูงสุดสำหรับวันนั้น (column A = เลขที่ใบกำกับ)
+    // รูปแบบ: YYMMDDXXXX เช่น 2601070001
     for (let i = 1; i < data.length; i++) {
-        const invoiceNumber = String(data[i][0] || '');
-        if (invoiceNumber.startsWith(prefix)) {
-            const numPart = invoiceNumber.replace(prefix, '');
-            const num = parseInt(numPart, 10);
-            if (!isNaN(num) && num > maxNumber) {
-                maxNumber = num;
+        const invoiceNumber = String(data[i][0] || '').trim();
+
+        // ตรวจสอบว่าขึ้นต้นด้วย datePrefix หรือไม่
+        if (invoiceNumber.startsWith(datePrefix)) {
+            // ดึงส่วนเลขรัน (4 หลักท้าย)
+            const runningPart = invoiceNumber.substring(datePrefix.length);
+            const num = parseInt(runningPart, 10);
+            if (!isNaN(num) && num > maxRunningNumber) {
+                maxRunningNumber = num;
             }
         }
     }
 
+    Logger.log('Date prefix: ' + datePrefix + ', Max running: ' + maxRunningNumber);
+
     return {
         success: true,
-        latestNumber: maxNumber,
-        nextNumber: maxNumber + 1,
-        message: `เลขใบกำกับล่าสุด: ${prefix}${maxNumber}`
+        datePrefix: datePrefix,
+        latestNumber: maxRunningNumber,
+        nextNumber: maxRunningNumber + 1,
+        nextInvoiceNumber: datePrefix + String(maxRunningNumber + 1).padStart(4, '0'),
+        message: `เลขใบกำกับล่าสุดของวันที่ ${datePrefix}: ${maxRunningNumber}`
     };
 }
 
