@@ -2814,9 +2814,10 @@ const App = {
             },
             branchType: invoice.branchType || 'hq',
             branchNumber: invoice.branchNumber || '',
+            // ถ้าไม่มีข้อมูล payment ให้แสดงเป็นเงินสดเต็มจำนวน (สำหรับใบกำกับเก่า)
             payment: invoice.payment || {
                 cash: true,
-                cashAmount: invoice.total,
+                cashAmount: invoice.total || 0,
                 transfer: false,
                 transferAmount: 0
             },
