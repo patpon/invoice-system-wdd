@@ -123,39 +123,47 @@ const App = {
 
     /**
      * Sync เลขที่ใบกำกับจาก Google Sheets
-     * หาเลขล่าสุดจากข้อมูลใน Sheets แล้ว +1
+     * ดึงเลขล่าสุดสำหรับวันที่ที่เลือกจาก Sheets
+     * @param {string} date - วันที่ในรูปแบบ YYYY-MM-DD (optional, default = today)
      */
-    async syncInvoiceNumber() {
+    async syncInvoiceNumber(date) {
         try {
-            const invoices = await SheetsAPI.fetchInvoices();
-            if (invoices.length === 0) return;
+            // ใช้วันที่จาก form หรือวันที่ปัจจุบัน
+            const invoiceDate = date || document.getElementById('invoiceDate')?.value || new Date().toISOString().split('T')[0];
 
-            const settings = Storage.getSettings();
-            const prefix = settings.invoicePrefix || 'INV-';
+            console.log('Syncing invoice number for date:', invoiceDate);
 
-            // หาเลขใบกำกับล่าสุดที่ตรงกับ prefix
-            let maxNumber = 0;
-            invoices.forEach(inv => {
-                if (inv.invoiceNumber && inv.invoiceNumber.startsWith(prefix)) {
-                    const numPart = inv.invoiceNumber.replace(prefix, '');
-                    const num = parseInt(numPart, 10);
-                    if (!isNaN(num) && num > maxNumber) {
-                        maxNumber = num;
-                    }
-                }
-            });
+            // เรียก API ดึงเลขล่าสุดจาก Google Sheets
+            const result = await SheetsAPI.getLatestInvoiceNumber(invoiceDate);
 
-            if (maxNumber > 0) {
-                // ตั้งค่า counter เป็นเลขล่าสุด + 1
-                Storage.resetInvoiceCounter(maxNumber + 1);
+            if (result && result.success) {
+                // อัพเดท counter ใน localStorage
+                const nextNumber = result.nextNumber || 1;
+                Storage.resetInvoiceCounter(nextNumber);
 
                 // อัพเดท UI
-                document.getElementById('invoiceNumber').value = Storage.previewNextInvoiceNumber();
+                const invoiceNumberField = document.getElementById('invoiceNumber');
+                if (invoiceNumberField) {
+                    invoiceNumberField.value = result.nextInvoiceNumber || Storage.previewNextInvoiceNumber();
+                }
 
-                console.log(`Invoice number synced: next = ${maxNumber + 1}`);
+                console.log(`Invoice number synced from Sheets: ${result.nextInvoiceNumber} (next running: ${nextNumber})`);
+                return result;
+            } else {
+                // ถ้าไม่สำเร็จ ใช้ local counter
+                console.warn('Could not sync from Sheets, using local counter');
+                const invoiceNumberField = document.getElementById('invoiceNumber');
+                if (invoiceNumberField) {
+                    invoiceNumberField.value = Storage.previewNextInvoiceNumber();
+                }
             }
         } catch (error) {
             console.warn('Could not sync invoice number:', error);
+            // Fallback to local
+            const invoiceNumberField = document.getElementById('invoiceNumber');
+            if (invoiceNumberField) {
+                invoiceNumberField.value = Storage.previewNextInvoiceNumber();
+            }
         }
     },
 
