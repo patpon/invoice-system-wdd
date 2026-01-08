@@ -908,8 +908,12 @@ const App = {
         const paymentTransfer = document.getElementById('paymentTransfer').checked;
         const paymentTransferAmount = parseFloat(document.getElementById('paymentTransferAmount').value) || 0;
 
+        // ใช้เลขใบกำกับจากฟอร์มที่แสดงอยู่ (ซึ่งสร้างจากวันที่ที่เลือก)
+        // และเพิ่ม counter หลังจากนี้
+        const invoiceNumber = document.getElementById('invoiceNumber').value;
+
         const invoiceData = {
-            invoiceNumber: Storage.getNextInvoiceNumber(),
+            invoiceNumber: invoiceNumber,
             date: document.getElementById('invoiceDate').value,
             customerName: document.getElementById('customerName').value,
             customerAddress: document.getElementById('customerAddress').value,
@@ -933,6 +937,9 @@ const App = {
 
         try {
             await SheetsAPI.saveInvoice(invoiceData);
+            // เพิ่ม counter สำหรับเลขถัดไป
+            this.incrementInvoiceCounter();
+
             this.showToast('บันทึกใบกำกับภาษีสำเร็จ', 'success');
 
             // Reset form
@@ -942,6 +949,8 @@ const App = {
             this.loadDashboard();
         } catch (error) {
             console.error('Error saving invoice:', error);
+            // เพิ่ม counter แม้เกิด error เพราะบันทึกใน local สำเร็จแล้ว
+            this.incrementInvoiceCounter();
             this.showToast('บันทึกใบกำกับภาษีสำเร็จ (เก็บในเครื่อง)', 'success');
             this.resetInvoiceForm();
         }
@@ -996,8 +1005,8 @@ const App = {
         // Get copy option
         const includeCopy = document.getElementById('includeCopy').checked;
 
-        // ดึงเลขใบกำกับหลังจาก validate และ disable ปุ่มแล้ว
-        const invoiceNumber = Storage.getNextInvoiceNumber();
+        // ใช้เลขใบกำกับจากฟอร์มที่แสดงอยู่ (ซึ่งสร้างจากวันที่ที่เลือก)
+        const invoiceNumber = document.getElementById('invoiceNumber').value;
 
         // Get customer data
         const customerTaxId = document.getElementById('customerTaxId').value;
@@ -1057,9 +1066,13 @@ const App = {
 
         try {
             await SheetsAPI.saveInvoice(invoiceData);
+            // เพิ่ม counter สำหรับเลขถัดไป
+            this.incrementInvoiceCounter();
             this.showToast('บันทึกใบกำกับภาษีสำเร็จ', 'success');
         } catch (error) {
             console.error('Error saving invoice:', error);
+            // เพิ่ม counter แม้เกิด error เพราะบันทึกใน local สำเร็จแล้ว
+            this.incrementInvoiceCounter();
             this.showToast('บันทึกใบกำกับภาษีสำเร็จ (เก็บในเครื่อง)', 'success');
         }
 
@@ -1119,6 +1132,16 @@ const App = {
 
         // กลับไปหน้าสร้างใบกำกับ
         this.switchTab('invoice');
+    },
+
+    /**
+     * เพิ่ม counter สำหรับเลขใบกำกับถัดไป
+     * ใช้หลังจากบันทึกใบกำกับสำเร็จ
+     */
+    incrementInvoiceCounter() {
+        const counter = parseInt(localStorage.getItem('bill_invoice_counter')) || 1;
+        localStorage.setItem('bill_invoice_counter', counter + 1);
+        console.log('Invoice counter incremented to:', counter + 1);
     },
 
     /**
@@ -2369,6 +2392,21 @@ const App = {
                             </div>
                         </div>
                         
+                        <div class="form-group" style="margin-top: 10px;">
+                            <label>ประเภทสาขา</label>
+                            <div class="branch-options" style="display: flex; gap: 20px; margin-top: 5px;">
+                                <label class="radio-label" style="display: flex; align-items: center; gap: 5px; cursor: pointer;">
+                                    <input type="radio" name="editBranchType" value="hq" id="editBranchTypeHQ" onchange="App.toggleEditBranchNumber()" checked>
+                                    <span>🏢 สำนักงานใหญ่</span>
+                                </label>
+                                <label class="radio-label" style="display: flex; align-items: center; gap: 5px; cursor: pointer;">
+                                    <input type="radio" name="editBranchType" value="branch" id="editBranchTypeBranch" onchange="App.toggleEditBranchNumber()">
+                                    <span>🏠 สาขาที่</span>
+                                </label>
+                                <input type="text" id="editBranchNumber" placeholder="เลขสาขา" style="width: 100px; display: none;">
+                            </div>
+                        </div>
+                        
                         <h4 style="margin: 15px 0 10px; color: var(--primary);">📦 รายการสินค้า/บริการ</h4>
                         <div id="editInvoiceItemsContainer"></div>
                         <button class="btn btn-secondary btn-sm" onclick="App.addEditInvoiceItem()" style="margin-top: 10px;">➕ เพิ่มรายการ</button>
@@ -2435,6 +2473,18 @@ const App = {
         document.getElementById('editPaymentTransferAmount').value = payment.transferAmount || '';
         document.getElementById('editPaymentTransferAmount').disabled = !payment.transfer;
 
+        // Load branch info
+        const branchType = invoice.branchType || 'hq';
+        if (branchType === 'branch') {
+            document.getElementById('editBranchTypeBranch').checked = true;
+            document.getElementById('editBranchNumber').style.display = 'block';
+            document.getElementById('editBranchNumber').value = invoice.branchNumber || '';
+        } else {
+            document.getElementById('editBranchTypeHQ').checked = true;
+            document.getElementById('editBranchNumber').style.display = 'none';
+            document.getElementById('editBranchNumber').value = '';
+        }
+
         // Load items
         this.renderEditInvoiceItems();
 
@@ -2462,6 +2512,20 @@ const App = {
         amountInput.disabled = !checkbox.checked;
         if (checkbox.checked && !amountInput.value) {
             amountInput.value = this.editingInvoice.total || 0;
+        }
+    },
+
+    /**
+     * Toggle แสดง/ซ่อน input เลขสาขาใน Modal แก้ไข
+     */
+    toggleEditBranchNumber() {
+        const branchType = document.querySelector('input[name="editBranchType"]:checked')?.value || 'hq';
+        const branchNumberInput = document.getElementById('editBranchNumber');
+        if (branchType === 'branch') {
+            branchNumberInput.style.display = 'block';
+        } else {
+            branchNumberInput.style.display = 'none';
+            branchNumberInput.value = '';
         }
     },
 
@@ -2615,6 +2679,14 @@ const App = {
         const customerPhone = document.getElementById('editInvoiceCustomerPhone').value;
         const invoiceDate = document.getElementById('editInvoiceDate').value;
 
+        // Get branch info from form
+        const branchType = document.querySelector('input[name="editBranchType"]:checked')?.value || 'hq';
+        const branchNumber = branchType === 'branch' ? document.getElementById('editBranchNumber').value : '';
+
+        // Update editingInvoice with branch info for printing
+        this.editingInvoice.branchType = branchType;
+        this.editingInvoice.branchNumber = branchNumber;
+
         // Update items from form
         this.updateEditItemsFromForm();
 
@@ -2636,6 +2708,8 @@ const App = {
             transfer: paymentTransfer,
             transferAmount: paymentTransferAmount
         };
+        invoices[index].branchType = branchType;
+        invoices[index].branchNumber = branchNumber;
         invoices[index].updatedAt = new Date().toISOString();
 
         // Store original invoice number if it was changed (for Sheets update)
