@@ -544,6 +544,14 @@ const App = {
      */
     showCustomerResults(customers) {
         const container = document.getElementById('customerResults');
+        const searchValue = document.getElementById('customerSearch').value.trim();
+
+        if (customers.length === 0 && searchValue) {
+            container.classList.remove('active');
+            // แสดง popup ถามว่าต้องการเพิ่มลูกค้าใหม่หรือไม่
+            this.showAddCustomerConfirmPopup(searchValue);
+            return;
+        }
 
         if (customers.length === 0) {
             container.classList.remove('active');
@@ -592,6 +600,139 @@ const App = {
         this.updatePreview();
 
         this.showToast(`เลือกลูกค้า: ${customer.name}`, 'success');
+    },
+
+    /**
+     * แสดง Popup ยืนยันเพิ่มลูกค้าใหม่ เมื่อค้นหาไม่พบ
+     */
+    showAddCustomerConfirmPopup(searchValue) {
+        // ตรวจสอบถ้ามี popup อยู่แล้ว ให้ลบทิ้งก่อน
+        const existingOverlay = document.getElementById('addCustomerConfirmOverlay');
+        if (existingOverlay) {
+            existingOverlay.remove();
+        }
+        const existingStyle = document.getElementById('addCustomerConfirmStyle');
+        if (existingStyle) {
+            existingStyle.remove();
+        }
+
+        // สร้าง overlay
+        const overlay = document.createElement('div');
+        overlay.id = 'addCustomerConfirmOverlay';
+        overlay.style.cssText = `
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10000;
+            animation: fadeIn 0.2s ease;
+        `;
+
+        // สร้าง popup
+        const popup = document.createElement('div');
+        popup.style.cssText = `
+            background: white;
+            border-radius: 16px;
+            padding: 30px;
+            max-width: 400px;
+            width: 90%;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            text-align: center;
+            animation: slideUp 0.3s ease;
+        `;
+
+        popup.innerHTML = `
+            <div style="font-size: 48px; margin-bottom: 15px;">🔍</div>
+            <h3 style="margin: 0 0 10px 0; font-size: 20px; color: #1e293b;">ไม่พบลูกค้า</h3>
+            <p style="margin: 0 0 20px 0; color: #64748b; font-size: 15px;">
+                ไม่พบลูกค้าที่ค้นหา "${searchValue}"<br>
+                คุณต้องการเพิ่มลูกค้าใหม่หรือไม่?
+            </p>
+            <div style="display: flex; gap: 12px; justify-content: center;">
+                <button id="confirmAddCustomerBtn" style="
+                    background: linear-gradient(135deg, #6366f1, #8b5cf6);
+                    color: white;
+                    border: none;
+                    padding: 12px 24px;
+                    border-radius: 10px;
+                    font-size: 15px;
+                    font-weight: 600;
+                    cursor: pointer;
+                    transition: all 0.2s;
+                    font-family: inherit;
+                ">✅ เพิ่มลูกค้าใหม่</button>
+                <button id="cancelAddCustomerBtn" style="
+                    background: #f1f5f9;
+                    color: #64748b;
+                    border: none;
+                    padding: 12px 24px;
+                    border-radius: 10px;
+                    font-size: 15px;
+                    font-weight: 600;
+                    cursor: pointer;
+                    transition: all 0.2s;
+                    font-family: inherit;
+                ">❌ ยกเลิก</button>
+            </div>
+        `;
+
+        overlay.appendChild(popup);
+        document.body.appendChild(overlay);
+
+        // Add CSS animation
+        const style = document.createElement('style');
+        style.id = 'addCustomerConfirmStyle';
+        style.textContent = `
+            @keyframes fadeIn {
+                from { opacity: 0; }
+                to { opacity: 1; }
+            }
+            @keyframes slideUp {
+                from { transform: translateY(20px); opacity: 0; }
+                to { transform: translateY(0); opacity: 1; }
+            }
+            #confirmAddCustomerBtn:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4);
+            }
+            #cancelAddCustomerBtn:hover {
+                background: #e2e8f0;
+            }
+        `;
+        document.head.appendChild(style);
+
+        // Event handlers
+        const closePopup = () => {
+            overlay.remove();
+            document.getElementById('addCustomerConfirmStyle')?.remove();
+        };
+
+        document.getElementById('confirmAddCustomerBtn').addEventListener('click', () => {
+            closePopup();
+            // เปิด Modal เพิ่มลูกค้าใหม่ (ฟอร์มว่างเปล่า)
+            this.openCustomerModal();
+        });
+
+        document.getElementById('cancelAddCustomerBtn').addEventListener('click', closePopup);
+
+        // ปิดเมื่อคลิกที่ overlay
+        overlay.addEventListener('click', (e) => {
+            if (e.target === overlay) closePopup();
+        });
+
+        // ปิดเมื่อกด Escape
+        const handleEscape = (e) => {
+            if (e.key === 'Escape') {
+                closePopup();
+                document.removeEventListener('keydown', handleEscape);
+            }
+        };
+        document.addEventListener('keydown', handleEscape);
     },
 
     /**
@@ -1414,6 +1555,18 @@ const App = {
             this.customers = Storage.getCustomers();
             this.renderCustomersTable();
             this.closeModal('customerModal');
+
+            // Auto-fill ข้อมูลลูกค้าใหม่ลงฟอร์ม (เฉพาะกรณีเพิ่มใหม่)
+            if (!editId) {
+                this.selectedCustomer = customer;
+                document.getElementById('customerSearch').value = customer.name || '';
+                document.getElementById('customerName').value = customer.name || '';
+                document.getElementById('customerAddress').value = customer.address || '';
+                document.getElementById('customerTaxId').value = String(customer.taxId || '');
+                document.getElementById('customerPhone').value = String(customer.phone || '');
+                this.updatePreview();
+                this.showToast(`เลือกลูกค้า: ${customer.name}`, 'success');
+            }
         } finally {
             // ซ่อน Loading และ enable ปุ่มบันทึก
             this.hideLoading();
